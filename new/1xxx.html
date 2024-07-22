@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+  <html lang="zh">
+  <head>
+	  <title>1XXX错误</title>
+	  <link rel="stylesheet" href="https://static.hzchu.top/bootstrap/4.3.1/css/bootstrap.min.css">
+	  <style>
+		  body {
+			  height: 100vh;
+			  display: flex;
+			  align-items: center;
+			  justify-content: center;
+		  }
+		  img {
+			  box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+			  margin-bottom: 5rem;
+
+		  }
+		  #sendemail {
+			background-color: #18a32b;
+		  }
+          .sub-footer ul li{
+            color: #3d3d3d;
+            font-size: 10px;
+            display: inline;
+            margin-left: 5px;
+        }
+
+        .sub-footer ul li:first-child{
+            margin-left: 0px
+        }
+
+        .sub-footer ul li::before{
+            content: '•';
+            padding-right: 6px;
+        }
+
+        .sub-footer ul li:first-child::before {
+            content: none;
+        }
+        
+        .sub-footer ul{
+            padding:0;
+        }
+	  </style>
+	  <meta charset="UTF-8">
+  </head>
+  <body>
+	  <div class="container ">
+		<img src="https://onep.hzchu.top/mount/pic/myself/2024/07/669df505784e2.png?fmt=jpeg" width="200" />
+		  <h1 class="mb-4">等一下下吖ο(=•ω＜=)ρ⌒☆</h1>
+		  <p class="lead mb-4">你现在无法访问<span id="domainName"></span>哦，我们会尽快恢复的啦！</p>
+          ::CLOUDFLARE_ERROR_1000S_BOX::
+          <div class="sub-footer">
+        <div class="w-full h-2 bg-grey-light my-3 md:my-6"></div>
+        <ul>
+            <!-- <li>错误域名: <span id="domainName"></span></li> -->
+            <li>Cloudflare事件ID: ::RAY_ID::</li>
+            <li>你的IP: ::CLIENT_IP::</li>
+            <li>Performance &amp; Security by Cloudflare</li>
+        </ul>
+    </div> 
+		  <a href="mailto:thun888@hzchu.top" class="btn btn-primary" id="sendemail">发送邮件咨询我们</a>
+	  </div>
+	  <script src="https://static.hzchu.top/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+      <script>
+        domain = window.location.host
+        document.getElementById("domainName").innerHTML = domain
+      </script>
+  </body>
+  </html>
