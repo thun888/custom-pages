@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>404</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #fffcf0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      display: flex;
+      width: 80vw;
+      max-width: 1000px;
+      min-height: 60vh;
+      border-radius: 18px;
+      background: #fffcf0;
+      overflow: hidden;
+    }
+    .left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 48px 36px;
+    }
+    .left h1 {
+      font-size: 2.2rem;
+      color: #b48e6a;
+      margin-bottom: 24px;
+    }
+    .left p {
+      font-size: 1.2rem;
+      color: #7c6f57;
+      margin-bottom: 18px;
+    }
+    .left span {
+      font-size: 1.2rem;
+      color: #7c6f57;
+      margin-bottom: 18px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 28px;
+      background: #ffd1ca;
+      color: #b48e6a;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 1rem;
+      margin-top: 12px;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #fdb3a7;
+      color: #843927;
+    }
+    .right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+    }
+    .right img {
+      max-width: 100%;
+      max-height: 60vh;
+      border-radius: 12px;
+    }
+    @media (max-width: 700px) {
+      .container {
+        flex-direction: column;
+        width: 98vw;
+        min-height: unset;
+      }
+      .right, .left {
+        padding: 24px 12px;
+      }
+      .right img {
+        max-height: 30vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="left">
+      <h1>无权访问该资源</h1>
+      <!-- <p>我们将会收集数据并尽快修复</p> -->
+      <p>错误：403 Forbidden </p>
+      <div class="edesc">
+        <p>RequestID: <span id="requestId">{{REQUEST_ID}}</span></p>
+        <p>RuleID: <span id="ruleId">{{RULE_ID}}</span></p>
+      </div>
+      <a href="mailto:thun888@hzchu.top" class="btn" id="sendemail">发送邮件咨询？</a>
+    </div>
+    <div class="right">
+      <img src="https://onep.hzchu.top/mount/pic/myself/2026/04/403-2-69e10361ae6ed.webp" alt="403">
+    </div>
+  </div>
+</body>
+</html>
