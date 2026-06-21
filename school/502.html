@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>502 - 网关错误</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --colors-canvas: #ffffff;
+            --colors-surface-1: #f4f4f4;
+            --colors-surface-2: #e0e0e0;
+            --colors-ink: #161616;
+            --colors-ink-muted: #525252;
+            --colors-ink-subtle: #8c8c8c;
+            --colors-primary: #0f62fe;
+            --colors-blue-hover: #0353e9;
+            --colors-blue-60: #0f62fe;
+            --colors-blue-80: #002d9c;
+            --colors-hairline: #e0e0e0;
+            --colors-hairline-strong: #161616;
+            --colors-inverse-canvas: #161616;
+            --colors-inverse-ink: #ffffff;
+            --colors-inverse-ink-muted: #c6c6c6;
+            --colors-semantic-error: #da1e28;
+            --colors-semantic-warning: #f1c21b;
+            --spacing-xxs: 4px;
+            --spacing-xs: 8px;
+            --spacing-sm: 12px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-xxl: 48px;
+            --spacing-section: 96px;
+            --typography-display-xl: 76px;
+            --typography-display-lg: 60px;
+            --typography-display-md: 42px;
+            --typography-headline: 32px;
+            --typography-body-lg: 18px;
+            --typography-body: 16px;
+            --typography-body-sm: 14px;
+            --typography-caption: 12px;
+            --typography-button: 14px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+            background-color: var(--colors-canvas);
+            color: var(--colors-ink);
+            line-height: 1.50;
+            letter-spacing: 0.16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-section) var(--spacing-xl);
+            text-align: center;
+        }
+
+        .error-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: var(--spacing-lg);
+            color: var(--colors-semantic-warning);
+        }
+
+        .error-code {
+            font-size: var(--typography-display-xl);
+            font-weight: 300;
+            line-height: 1.17;
+            letter-spacing: -0.5px;
+            color: var(--colors-ink);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .error-title {
+            font-size: var(--typography-headline);
+            font-weight: 400;
+            line-height: 1.25;
+            color: var(--colors-ink);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .error-description {
+            font-size: var(--typography-body-lg);
+            color: var(--colors-ink-muted);
+            max-width: 480px;
+            margin-bottom: var(--spacing-xxl);
+        }
+
+        .button-group {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .button-primary {
+            background-color: var(--colors-primary);
+            color: var(--colors-inverse-ink);
+            font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+            font-size: var(--typography-button);
+            font-weight: 400;
+            letter-spacing: 0.16px;
+            padding: 12px 16px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: background-color 0.15s ease;
+        }
+
+        .button-primary:hover {
+            background-color: var(--colors-blue-hover);
+        }
+
+        .button-secondary {
+            background-color: var(--colors-ink);
+            color: var(--colors-inverse-ink);
+            font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+            font-size: var(--typography-button);
+            font-weight: 400;
+            letter-spacing: 0.16px;
+            padding: 12px 16px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: background-color 0.15s ease;
+        }
+
+        .button-secondary:hover {
+            background-color: #393939;
+        }
+
+        .button-tertiary {
+            background-color: var(--colors-canvas);
+            color: var(--colors-primary);
+            font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+            font-size: var(--typography-button);
+            font-weight: 400;
+            letter-spacing: 0.16px;
+            padding: 12px 16px;
+            border: 1px solid var(--colors-primary);
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: background-color 0.15s ease;
+        }
+
+        .button-tertiary:hover {
+            background-color: var(--colors-surface-1);
+        }
+
+        /* Responsive */
+        @media (max-width: 672px) {
+            .error-icon {
+                width: 64px;
+                height: 64px;
+            }
+
+            .error-code {
+                font-size: var(--typography-display-md);
+            }
+
+            .error-title {
+                font-size: var(--typography-headline);
+            }
+
+            .error-description {
+                font-size: var(--typography-body);
+            }
+
+            .button-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .button-primary,
+            .button-secondary,
+            .button-tertiary {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Content -->
+    <main class="main-content">
+        <svg class="error-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="38" stroke="currentColor" stroke-width="2"/>
+            <path d="M25 40h30" stroke="currentColor" stroke-width="3" stroke-linecap="square"/>
+            <path d="M40 25v30" stroke="currentColor" stroke-width="3" stroke-linecap="square"/>
+        </svg>
+        <div class="error-code">502</div>
+        <h1 class="error-title">网关错误</h1>
+        <p class="error-description">服务器遇到了一个临时错误，无法完成您的请求。<br>若长时间遇到该问题，请在群内询问。</p>
+
+        <div class="button-group">
+            <a href="/" class="button-primary">返回首页</a>
+            <a href="javascript:location.reload()" class="button-secondary">刷新页面</a>
+            <!-- <a href="/status" class="button-tertiary">查看系统状态</a> -->
+        </div>
+    </main>
+</body>
+</html>
