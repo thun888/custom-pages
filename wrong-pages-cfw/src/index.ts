@@ -8,22 +8,31 @@
  */
 
 // 导入 HTML 模板
-import htmlContent from '../public/50x-cf.html';
+import htmlContent from '../public/5xx-cf.html';
 
-// HTTP 状态码对应的描述文本
-const STATUS_TEXTS: Record<number, string> = {
-	500: 'Internal Server Error',
-	502: 'Bad Gateway',
-	503: 'Service Unavailable',
-	504: 'Gateway Timeout',
-	522: 'Connection Timed Out',
+// HTTP 状态码对应的描述文本（Cloudflare 5xx 错误码）
+// 英文和中文分开存储，前端通过鼠标悬浮切换显示
+const STATUS_TEXTS: Record<number, { en: string; zh: string }> = {
+	500: { en: 'Internal Server Error', zh: 'Cloudflare 内部错误' },
+	501: { en: 'Not Implemented', zh: '服务不支持' },
+	502: { en: 'Bad Gateway', zh: '源站返回异常' },
+	503: { en: 'Service Unavailable', zh: '服务不可用' },
+	504: { en: 'Gateway Timeout', zh: '源站响应超时' },
+	520: { en: 'Unknown Error', zh: '源站返回异常响应' },
+	521: { en: 'Web Server Down', zh: '源站拒绝连接' },
+	522: { en: 'Connection Timed Out', zh: 'Cloudflare 连接源站超时' },
+	523: { en: 'Origin Unreachable', zh: '源站不可达' },
+	524: { en: 'A Timeout Occurred', zh: '已连接但响应超时' },
+	525: { en: 'SSL Handshake Failed', zh: 'SSL 握手失败' },
+	526: { en: 'Invalid SSL Certificate', zh: '证书无效' },
+	530: { en: 'Origin Error', zh: '源站错误' },
 };
 
 /**
  * 获取状态码的描述文本
  */
-function getStatusText(status: number): string {
-	return STATUS_TEXTS[status] || 'Server Error';
+function getStatusText(status: number): { en: string; zh: string } {
+	return STATUS_TEXTS[status] || { en: 'Server Error', zh: '服务器错误' };
 }
 
 /**
@@ -38,13 +47,14 @@ function generateErrorResponse(status: number, request: Request): Response {
 	const userIP = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '未知';
 	const userAgent = request.headers.get('User-Agent') || '未知';
 	const cfRay = request.headers.get('CF-Ray')?.split('-')[0] || '未知';
-	// const cfColo = request.headers.get('CF-Ray')?.split('-')[1]|| '未知';
 
 	// 构建错误信息盒子
 	const errorBox = `
 		<div style="background: rgba(180, 142, 106, 0.1); border-radius: 8px; padding: 16px; margin: 12px 0;">
-			<p style="margin: 8px 0;"><strong>错误代码：</strong>${status} ${statusText}</p>
-			<p style="margin: 8px 0;"><strong>请求地址：</strong>${url.href}</p>
+			<p style="margin: 8px 0;"><strong>错误代码：</strong>${status}
+				<span class="status-text">${statusText.en}<span class="zh">${statusText.zh}</span></span>
+			</p>
+			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>请求地址：</strong>${url.href}</p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>Cloudflare事件ID：</strong>${cfRay}</p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>Cloudflare节点：</strong><span id="cfColo">获取中...</span></p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>用户IP：</strong>${userIP}</p>
@@ -56,7 +66,7 @@ function generateErrorResponse(status: number, request: Request): Response {
 	// 替换占位符
 	let html = htmlContent.replace('::CLOUDFLARE_ERROR_500S_BOX::', errorBox);
 	// 替换邮件发送内容
-	html = html.replace('mailto:thun888@hzchu.top', `mailto:thun888@hzchu.top?subject=错误报告&body=错误代码：${status} ${statusText}%0A请求地址：${url.href}%0ACloudflare事件ID：${cfRay}%0A用户IP：${userIP}%0A用户代理：${userAgent}%0A请求时间：${timestamp}`);
+	html = html.replace('mailto:thun888@hzchu.top', `mailto:thun888@hzchu.top?subject=错误报告&body=错误代码：${status} ${statusText.en} (${statusText.zh})%0A请求地址：${url.href}%0ACloudflare事件ID：${cfRay}%0A用户IP：${userIP}%0A用户代理：${userAgent}%0A请求时间：${timestamp}`);
 
 	return new Response(html, {
 		status: status,
