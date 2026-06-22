@@ -17,6 +17,7 @@ import { createHash } from 'crypto';
 interface Env {
 	TG_BOT_TOKEN?: string;
 	TG_CHAT_ID?: string;
+	test?: boolean; // 测试标志
 }
 
 // HTTP 状态码对应的描述文本（Cloudflare 5xx 错误码）
@@ -57,7 +58,7 @@ async function sendTelegramReport(
 	userIP: string,
 	userAgent: string,
 	timestamp: string
-): Promise<void> {
+): Promise<string | undefined> {
 
 	const domain_short_hash = createHash('sha256').update(new URL(url).hostname).digest('hex').slice(0, 8);
 	const message = `#${domain_short_hash} CF错误报告
@@ -70,7 +71,7 @@ async function sendTelegramReport(
 *请求时间:* ${timestamp}`;
 
 	try {
-		await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+		const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -79,16 +80,15 @@ async function sendTelegramReport(
 				parse_mode: 'Markdown',
         		disable_web_page_preview: true,
 			}),
-		})
-			.then((res) => res.json())
-			.then((data) => {
-
-			})
-			.catch((e) => {
-				console.error('Failed to send Telegram report:', e);
-			});
+		});
+		const data: any = await res.json();
+		if (!data.ok) {
+			throw new Error(`Telegram API error: ${data.description}`);
+		}
+		return data.result.message_id;
 	} catch (e) {
 		console.error('Telegram report failed:', e);
+		return undefined;
 	}
 }
 
@@ -105,9 +105,10 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 	const userAgent = request.headers.get('User-Agent') || '未知';
 	const cfRay = request.headers.get('CF-Ray')?.split('-')[0] || '未知';
 
+	let tg_message_id: string | undefined = "无";
 	// 异步发送 Telegram 报告
-	if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) {
-		await sendTelegramReport(env.TG_BOT_TOKEN, env.TG_CHAT_ID, status, statusText, url.href, cfRay, userIP, userAgent, timestamp);
+	if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && !env.test) {
+		tg_message_id = await sendTelegramReport(env.TG_BOT_TOKEN, env.TG_CHAT_ID, status, statusText, url.href, cfRay, userIP, userAgent, timestamp);
 	}
 
 	// 构建错误信息盒子
@@ -122,13 +123,14 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>用户IP：</strong>${userIP}</p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>用户代理：</strong>${userAgent}</p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>请求时间：</strong>${timestamp}</p>
+			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>错误上报ID：</strong>${tg_message_id}</p>
 		</div>
 	`;
 
 	// 替换占位符
 	let html = htmlContent.replace('::CLOUDFLARE_ERROR_500S_BOX::', errorBox);
 	// 替换邮件发送内容
-	html = html.replace('mailto:thun888@hzchu.top', `mailto:thun888@hzchu.top?subject=错误报告&body=错误代码：${status} ${statusText.en} (${statusText.zh})%0A请求地址：${url.href}%0ACloudflare事件ID：${cfRay}%0A用户IP：${userIP}%0A用户代理：${userAgent}%0A请求时间：${timestamp}`);
+	html = html.replace('mailto:thun888@hzchu.top', `mailto:thun888@hzchu.top?subject=错误报告 &body=错误代码：${status} ${statusText.en} (${statusText.zh})%0A请求地址：${url.href}%0ACloudflare事件ID：${cfRay}%0A用户IP：${userIP}%0A用户代理：${userAgent}%0A请求时间：${timestamp}`);
 	// 替换标题
 	html = html.replace('<title>5XX错误</title>', `<title>${status} ${statusText.en} | ${statusText.zh}</title>`);
 	return new Response(html, {
@@ -146,6 +148,7 @@ export default {
 
 			// 测试后门：?test=1，强制显示 503
 			if (url.searchParams.get('test') === '1') {
+				env.test = true;
 				return generateErrorResponse(503, request, env);
 			}
 
