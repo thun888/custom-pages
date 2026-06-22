@@ -5,10 +5,19 @@
  * 1. 代理转发请求到上游源站
  * 2. 当上游返回 5xx 错误时，自动返回错误页面
  * 3. 将请求信息填入 ::CLOUDFLARE_ERROR_500S_BOX:: 占位符
+ * 4. 自动发送 Telegram 错误报告
  */
 
 // 导入 HTML 模板
 import htmlContent from '../public/5xx-cf.html';
+// 哈希
+import { createHash } from 'crypto';
+
+// 扩展 Env 接口以包含 Telegram 配置
+interface Env {
+	TG_BOT_TOKEN?: string;
+	TG_CHAT_ID?: string;
+}
 
 // HTTP 状态码对应的描述文本（Cloudflare 5xx 错误码）
 // 英文和中文分开存储，前端通过鼠标悬浮切换显示
@@ -36,9 +45,57 @@ function getStatusText(status: number): { en: string; zh: string } {
 }
 
 /**
+ * 发送 Telegram 错误报告
+ */
+async function sendTelegramReport(
+	botToken: string,
+	chatId: string,
+	status: number,
+	statusText: { en: string; zh: string },
+	url: string,
+	cfRay: string,
+	userIP: string,
+	userAgent: string,
+	timestamp: string
+): Promise<void> {
+
+	const domain_short_hash = createHash('sha256').update(new URL(url).hostname).digest('hex').slice(0, 8);
+	const message = `#${domain_short_hash} CF错误报告
+*错误代码:* \`${status}\` ${statusText.en} | ${statusText.zh}
+
+*请求地址:* ${url}
+*Cloudflare事件ID:* \`${cfRay}\`
+*用户IP:* \`${userIP}\`
+*用户代理:* \`${userAgent.substring(0, 50)}${userAgent.length > 50 ? '...' : ''}\`
+*请求时间:* ${timestamp}`;
+
+	try {
+		await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				chat_id: chatId,
+				text: message,
+				parse_mode: 'Markdown',
+        		disable_web_page_preview: true,
+			}),
+		})
+			.then((res) => res.json())
+			.then((data) => {
+
+			})
+			.catch((e) => {
+				console.error('Failed to send Telegram report:', e);
+			});
+	} catch (e) {
+		console.error('Telegram report failed:', e);
+	}
+}
+
+/**
  * 生成错误响应
  */
-function generateErrorResponse(status: number, request: Request): Response {
+async function generateErrorResponse(status: number, request: Request, env: Env): Promise<Response> {
 	const statusText = getStatusText(status);
 	const url = new URL(request.url);
 	const timestamp = new Date().toLocaleString('zh-CN', {
@@ -47,6 +104,11 @@ function generateErrorResponse(status: number, request: Request): Response {
 	const userIP = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '未知';
 	const userAgent = request.headers.get('User-Agent') || '未知';
 	const cfRay = request.headers.get('CF-Ray')?.split('-')[0] || '未知';
+
+	// 异步发送 Telegram 报告
+	if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) {
+		await sendTelegramReport(env.TG_BOT_TOKEN, env.TG_CHAT_ID, status, statusText, url.href, cfRay, userIP, userAgent, timestamp);
+	}
 
 	// 构建错误信息盒子
 	const errorBox = `
@@ -67,7 +129,8 @@ function generateErrorResponse(status: number, request: Request): Response {
 	let html = htmlContent.replace('::CLOUDFLARE_ERROR_500S_BOX::', errorBox);
 	// 替换邮件发送内容
 	html = html.replace('mailto:thun888@hzchu.top', `mailto:thun888@hzchu.top?subject=错误报告&body=错误代码：${status} ${statusText.en} (${statusText.zh})%0A请求地址：${url.href}%0ACloudflare事件ID：${cfRay}%0A用户IP：${userIP}%0A用户代理：${userAgent}%0A请求时间：${timestamp}`);
-
+	// 替换标题
+	html = html.replace('<title>5XX错误</title>', `<title>${status} ${statusText.en} | ${statusText.zh}</title>`);
 	return new Response(html, {
 		status: status,
 		headers: {
@@ -83,7 +146,7 @@ export default {
 
 			// 测试后门：?test=1，强制显示 503
 			if (url.searchParams.get('test') === '1') {
-				return generateErrorResponse(503, request);
+				return generateErrorResponse(503, request, env);
 			}
 
 			// 代理请求到上游源站
@@ -91,13 +154,13 @@ export default {
 
 			// 拦截 5xx 错误
 			if (response.status >= 500) {
-				return generateErrorResponse(response.status, request);
+				return generateErrorResponse(response.status, request, env);
 			}
 
 			return response;
 		} catch (e) {
 			// 彻底断网时的兜底，默认给 522
-			return generateErrorResponse(522, request);
+			return generateErrorResponse(522, request, env);
 		}
 	},
 } satisfies ExportedHandler<Env>;

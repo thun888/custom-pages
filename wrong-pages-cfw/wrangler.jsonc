@@ -32,6 +32,15 @@
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
 	 */
 	// "vars": {  "MY_VARIABLE": "production_value" }
+
+	// Telegram Bot 配置（用于发送错误报告）
+	// 建议使用 wrangler secret 设置敏感信息：
+	//   wrangler secret put TG_BOT_TOKEN
+	//   wrangler secret put TG_CHAT_ID
+	// "vars": {
+	//   "TG_BOT_TOKEN": "your-bot-token",
+	//   "TG_CHAT_ID": "your-chat-id"
+	// }
 	/**
 	 * Static Assets
 	 * https://developers.cloudflare.com/workers/static-assets/binding/
