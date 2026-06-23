@@ -4,12 +4,15 @@
  * 功能：
  * 1. 代理转发请求到上游源站
  * 2. 当上游返回 5xx 错误时，自动返回错误页面
- * 3. 将请求信息填入 ::CLOUDFLARE_ERROR_500S_BOX:: 占位符
+ * 3. 将请求信息填入 ::REPLACE_BOX:: 占位符
  * 4. 自动发送 Telegram 错误报告
  */
 
 // 导入 HTML 模板
-import htmlContent from '../public/5xx-cf.html';
+import htmlContent5xx from '../public/5xx-cf.html';
+import htmlContent403 from '../public/403-cf.html'; // 这里使用了同一个 HTML 模板文件
+// 导入 black-list.json
+import blackList from '../public/black-list.json' ;
 // 哈希
 import { createHash } from 'crypto';
 
@@ -17,12 +20,15 @@ import { createHash } from 'crypto';
 interface Env {
 	TG_BOT_TOKEN?: string;
 	TG_CHAT_ID?: string;
-	test?: boolean; // 测试标志
+	SKIP_NOTIFY?: boolean; // 测试标志
 }
 
 // HTTP 状态码对应的描述文本（Cloudflare 5xx 错误码）
 // 英文和中文分开存储，前端通过鼠标悬浮切换显示
 const STATUS_TEXTS: Record<number, { en: string; zh: string }> = {
+	403: { en: 'Forbidden', zh: '禁止访问该域名' },
+	404: { en: 'Not Found', zh: '未找到' },
+	405: { en: 'Method Not Allowed', zh: '方法不被允许' },
 	500: { en: 'Internal Server Error', zh: 'Cloudflare 内部错误' },
 	501: { en: 'Not Implemented', zh: '服务不支持' },
 	502: { en: 'Bad Gateway', zh: '源站返回异常' },
@@ -107,7 +113,7 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 
 	let tg_message_id: string | undefined = "无";
 	// 异步发送 Telegram 报告
-	if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && !env.test) {
+	if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && !env.SKIP_NOTIFY) {
 		tg_message_id = await sendTelegramReport(env.TG_BOT_TOKEN, env.TG_CHAT_ID, status, statusText, url.href, cfRay, userIP, userAgent, timestamp);
 	}
 
@@ -126,9 +132,16 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>错误上报ID：</strong>${tg_message_id}</p>
 		</div>
 	`;
-
+	let html;
+	if (status === 403) {
+		// 使用 403 模板
+		html = htmlContent403;
+	} else {
+		// 使用 5xx 模板
+		html = htmlContent5xx;
+	}
 	// 替换占位符
-	let html = htmlContent.replace('::CLOUDFLARE_ERROR_500S_BOX::', errorBox);
+	html = html.replace('::REPLACE_BOX::', errorBox);
 	// 替换邮件发送内容
 	html = html.replace('mailto:thun888@hzchu.top', `mailto:thun888@hzchu.top?subject=错误报告 &body=错误代码：${status} ${statusText.en} (${statusText.zh})%0A请求地址：${url.href}%0ACloudflare事件ID：${cfRay}%0A用户IP：${userIP}%0A用户代理：${userAgent}%0A请求时间：${timestamp}`);
 	// 替换标题
@@ -146,9 +159,16 @@ export default {
 		try {
 			const url = new URL(request.url);
 
-			// 测试后门：?test=1，强制显示 503
-			if (url.searchParams.get('test') === '1') {
-				env.test = true;
+			// 屏蔽域名
+			const hostname = url.hostname.toLowerCase();
+			if (blackList.includes(hostname)) {
+				env.SKIP_NOTIFY = true;
+				return generateErrorResponse(403, request, env);
+			}
+
+			// 测试后门：?testcfw=1，强制显示 503
+			if (url.searchParams.get('testcfw') === '1') {
+				env.SKIP_NOTIFY = true;
 				return generateErrorResponse(503, request, env);
 			}
 

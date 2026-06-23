@@ -13,6 +13,20 @@
 	"upload_source_maps": true,
 	"compatibility_flags": [
 		"nodejs_compat"
+	],
+	"routes": [
+		{
+		"pattern": "*.hzchu.top/*",
+		"zone_name": "757678.xyz"
+		},
+		{
+		"pattern": "*.757678.xyz/*",
+		"zone_name": "757678.xyz"
+		},
+		{
+		"pattern": "*.xn--ms8h.de5.net/*",
+		"zone_name": "xn--ms8h.de5.net"
+		}
 	]
 	/**
 	 * Smart Placement
@@ -40,6 +54,7 @@
 	// "vars": {
 	//   "TG_BOT_TOKEN": "your-bot-token",
 	//   "TG_CHAT_ID": "your-chat-id"
+	// 	 "BLACK_LIST": ["domain.com"] // 可选的黑名单列表
 	// }
 	/**
 	 * Static Assets
