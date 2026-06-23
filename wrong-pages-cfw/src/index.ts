@@ -161,7 +161,7 @@ export default {
 
 			// 屏蔽域名
 			const hostname = url.hostname.toLowerCase();
-			if (blackList.includes(hostname)) {
+			if (blackList.includes(hostname) && !url.pathname.startsWith('/.well-known/')) {
 				env.SKIP_NOTIFY = true;
 				return generateErrorResponse(403, request, env);
 			}
