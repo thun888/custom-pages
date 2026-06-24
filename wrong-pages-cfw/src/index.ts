@@ -19,6 +19,7 @@ import { createHash } from 'crypto';
 interface Env {
 	TG_BOT_TOKEN?: string;
 	TG_CHAT_ID?: string;
+	CONTACT_EMAIL?: string; // 错误报告收件人邮箱
 	SKIP_NOTIFY?: boolean; // 测试标志
 	ASSETS: Fetcher;
 }
@@ -116,13 +117,13 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 	const userIP = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '未知';
 	const userAgent = request.headers.get('User-Agent') || '未知';
 	const cfRay = request.headers.get('CF-Ray')?.split('-')[0] || '未知';
-	const cfColo = request.cf!.colo || '未知';
+	const cfColo = request.cf?.colo || '未知';
 
-	const userCountry = request.cf!.country as string || '未知';
-	const userRegion = request.cf!.region as string || '未知';
-	const userCity = request.cf!.city as string || '未知';
-	const userAsOrganization = request.cf!.asOrganization as string || '未知';
-	const userAsn = request.cf!.asn as string || '未知';
+	const userCountry = request.cf?.country as string || '未知';
+	const userRegion = request.cf?.region as string || '未知';
+	const userCity = request.cf?.city as string || '未知';
+	const userAsOrganization = request.cf?.asOrganization as string || '未知';
+	const userAsn = request.cf?.asn as string || '未知';
 
 	let tg_message_id: string | undefined = "无";
 	// 异步发送 Telegram 报告
@@ -162,9 +163,10 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 	请求时间：${timestamp}`,
 	});
 
+	const contactEmail = env.CONTACT_EMAIL || 'example@example.com';
 	html = html.replace(
-	"::EMAIL_REPLACE_BOX::",
-	`mailto:thun888@hzchu.top?${mail.toString()}`
+		"::EMAIL_REPLACE_BOX::",
+		`mailto:${contactEmail}?${mail.toString()}`
 	);
 
 	// 替换标题

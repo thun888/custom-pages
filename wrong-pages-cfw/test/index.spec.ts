@@ -6,7 +6,7 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
 describe('Error Page Worker', () => {
 	it('应返回 503 错误页面当 test=1 参数存在', async () => {
-		const request = new IncomingRequest('http://example.com/?test=1');
+		const request = new IncomingRequest('http://example.com/?testcfw=1');
 		const ctx = createExecutionContext();
 		const response = await worker.fetch(request, env, ctx);
 		await waitOnExecutionContext(ctx);
@@ -16,7 +16,7 @@ describe('Error Page Worker', () => {
 
 		const html = await response.text();
 		expect(html).toContain('503 Service Unavailable');
-		expect(html).toContain('http://example.com/?test=1');
+		expect(html).toContain('http://example.com/?testcfw=1');
 		expect(html).toContain('错误代码');
 	});
 
@@ -32,7 +32,7 @@ describe('Error Page Worker', () => {
 	});
 
 	it('应返回 503 错误页面 (integration style)', async () => {
-		const response = await SELF.fetch('https://example.com/?test=1');
+		const response = await SELF.fetch('https://example.com/?testcfw=1');
 		expect(response.status).toBe(503);
 
 		const html = await response.text();

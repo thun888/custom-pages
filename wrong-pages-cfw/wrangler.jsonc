@@ -32,7 +32,10 @@
 		"pattern": "*.xn--ms8h.de5.net/*",
 		"zone_name": "xn--ms8h.de5.net"
 		}
-	]
+	],
+	"vars": {
+		"CONTACT_EMAIL": "thun888@hzchu.top"
+	},
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
@@ -50,7 +53,6 @@
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
 	 */
-	// "vars": {  "MY_VARIABLE": "production_value" }
 
 	// Telegram Bot 配置（用于发送错误报告）
 	// 建议使用 wrangler secret 设置敏感信息：
@@ -58,7 +60,8 @@
 	//   wrangler secret put TG_CHAT_ID
 	// "vars": {
 	//   "TG_BOT_TOKEN": "your-bot-token",
-	//   "TG_CHAT_ID": "your-chat-id"
+	//   "TG_CHAT_ID": "your-chat-id",
+	//   "CONTACT_EMAIL": "your-email@example.com"
 	// 	 "BLACK_LIST": ["domain.com"] // 可选的黑名单列表
 	// }
 	/**
