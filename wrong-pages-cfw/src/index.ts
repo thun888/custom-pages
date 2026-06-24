@@ -169,13 +169,13 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 
 	// 替换标题
 	html = html.replaceAll('::TITLE_REPLACE_BOX::', `${status} ${statusText.en} | ${statusText.zh}`);
-	let imageUrl = '';
+	let imageUrl = '/__cfw_assets/img/';
 	if (status === 403) {
-		imageUrl = '/__cfw_assets/img/403.webp';
+		imageUrl += '403.webp';
 	} else if (status === 404) {
-		imageUrl = '/__cfw_assets/img/404.webp';
+		imageUrl += '404.webp';
 	} else {
-		imageUrl = '/__cfw_assets/img/5xx.webp';
+		imageUrl += '5xx.webp';
 	}
 	html = html.replace('::WRONG_IMAGE_REPLACE_BOX::', imageUrl);
 	return new Response(html, {
@@ -193,7 +193,7 @@ export default {
 
 			// 屏蔽域名
 			const hostname = url.hostname.toLowerCase();
-			if (blackList.includes(hostname) && !url.pathname.startsWith('/.well-known/')) {
+			if (blackList.includes(hostname) && !url.pathname.startsWith('/.well-known/') && !url.pathname.startsWith('/__cfw_assets/')) {
 				env.SKIP_NOTIFY = true;
 				return generateErrorResponse(403, request, env);
 			}
