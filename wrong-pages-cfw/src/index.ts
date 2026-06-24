@@ -4,13 +4,12 @@
  * 功能：
  * 1. 代理转发请求到上游源站
  * 2. 当上游返回 5xx 错误时，自动返回错误页面
- * 3. 将请求信息填入 ::REPLACE_BOX:: 占位符
+ * 3. 将请求信息填入 ::CARD_CONTENT_REPLACE_BOX:: 占位符
  * 4. 自动发送 Telegram 错误报告
  */
 
 // 导入 HTML 模板
-import htmlContent5xx from '../public/5xx-cf.html';
-import htmlContent403 from '../public/403-cf.html'; // 这里使用了同一个 HTML 模板文件
+import htmlTemplate from '../public/template.html';
 // 导入 black-list.json
 import blackList from '../public/black-list.json' ;
 // 哈希
@@ -21,15 +20,16 @@ interface Env {
 	TG_BOT_TOKEN?: string;
 	TG_CHAT_ID?: string;
 	SKIP_NOTIFY?: boolean; // 测试标志
+	ASSETS: Fetcher;
 }
 
 // HTTP 状态码对应的描述文本（Cloudflare 5xx 错误码）
 // 英文和中文分开存储，前端通过鼠标悬浮切换显示
 const STATUS_TEXTS: Record<number, { en: string; zh: string }> = {
 	403: { en: 'Forbidden', zh: '禁止访问该域名' },
-	404: { en: 'Not Found', zh: '未找到' },
+	404: { en: 'Not Found', zh: '未找到资源' },
 	405: { en: 'Method Not Allowed', zh: '方法不被允许' },
-	500: { en: 'Internal Server Error', zh: 'Cloudflare 内部错误' },
+	500: { en: 'Internal Server Error', zh: '源站服务器内部错误' },
 	501: { en: 'Not Implemented', zh: '服务不支持' },
 	502: { en: 'Bad Gateway', zh: '源站返回异常' },
 	503: { en: 'Service Unavailable', zh: '服务不可用' },
@@ -63,17 +63,23 @@ async function sendTelegramReport(
 	cfRay: string,
 	userIP: string,
 	userAgent: string,
+	userCountry: string,
+	userRegion: string,
+	userCity: string,
+	userAsOrganization: string,
+	userAsn: string,
 	timestamp: string
 ): Promise<string | undefined> {
 
 	const domain_short_hash = createHash('sha256').update(new URL(url).hostname).digest('hex').slice(0, 8);
 	const message = `#${domain_short_hash} CF错误报告
-*错误代码:* \`${status}\` ${statusText.en} | ${statusText.zh}
+*错误代码:* ${status} ${statusText.en} | ${statusText.zh}
 
 *请求地址:* ${url}
-*Cloudflare事件ID:* \`${cfRay}\`
-*用户IP:* \`${userIP}\`
-*用户代理:* \`${userAgent.substring(0, 50)}${userAgent.length > 50 ? '...' : ''}\`
+*Cloudflare事件ID:* ${cfRay}
+*用户IP:* ${userIP}
+*用户信息:* ${userCountry}/${userRegion}/${userCity}/${userAsOrganization}/${userAsn}
+*用户代理:* ${userAgent.substring(0, 50)}${userAgent.length > 50 ? '...' : ''}
 *请求时间:* ${timestamp}`;
 
 	try {
@@ -110,11 +116,18 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 	const userIP = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '未知';
 	const userAgent = request.headers.get('User-Agent') || '未知';
 	const cfRay = request.headers.get('CF-Ray')?.split('-')[0] || '未知';
+	const cfColo = request.cf!.colo || '未知';
+
+	const userCountry = request.cf!.country as string || '未知';
+	const userRegion = request.cf!.region as string || '未知';
+	const userCity = request.cf!.city as string || '未知';
+	const userAsOrganization = request.cf!.asOrganization as string || '未知';
+	const userAsn = request.cf!.asn as string || '未知';
 
 	let tg_message_id: string | undefined = "无";
 	// 异步发送 Telegram 报告
-	if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && !env.SKIP_NOTIFY) {
-		tg_message_id = await sendTelegramReport(env.TG_BOT_TOKEN, env.TG_CHAT_ID, status, statusText, url.href, cfRay, userIP, userAgent, timestamp);
+	if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && !env.SKIP_NOTIFY && !url.href.endsWith('favicon.ico')) {
+		tg_message_id = await sendTelegramReport(env.TG_BOT_TOKEN, env.TG_CHAT_ID, status, statusText, url.href, cfRay, userIP, userAgent, userCountry, userRegion, userCity, userAsOrganization, userAsn, timestamp);
 	}
 
 	// 构建错误信息盒子
@@ -125,27 +138,46 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 			</p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>请求地址：</strong>${url.href}</p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>Cloudflare事件ID：</strong>${cfRay}</p>
-			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>Cloudflare节点：</strong><span id="cfColo">获取中...</span></p>
+			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>Cloudflare节点：</strong>${cfColo}</p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>用户IP：</strong>${userIP}</p>
+			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>用户信息：</strong>${userCountry}/${userRegion}/${userCity}/${userAsOrganization}/${userAsn}</p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>用户代理：</strong>${userAgent}</p>
-			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>请求时间：</strong>${timestamp}</p>
+			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>请求时间：</strong>${timestamp} (Asia/Shanghai)</p>
 			<p style="margin: 8px 0; font-size: 0.8rem;"><strong>错误上报ID：</strong>${tg_message_id}</p>
 		</div>
 	`;
-	let html;
-	if (status === 403) {
-		// 使用 403 模板
-		html = htmlContent403;
-	} else {
-		// 使用 5xx 模板
-		html = htmlContent5xx;
-	}
+
 	// 替换占位符
-	html = html.replace('::REPLACE_BOX::', errorBox);
+	let html = htmlTemplate.replace('::CARD_CONTENT_REPLACE_BOX::', errorBox);
 	// 替换邮件发送内容
-	html = html.replace('mailto:thun888@hzchu.top', `mailto:thun888@hzchu.top?subject=错误报告 &body=错误代码：${status} ${statusText.en} (${statusText.zh})%0A请求地址：${url.href}%0ACloudflare事件ID：${cfRay}%0A用户IP：${userIP}%0A用户代理：${userAgent}%0A请求时间：${timestamp}`);
+	const mail = new URLSearchParams({
+	subject: "错误报告",
+	body: `错误代码：${status} ${statusText.en} (${statusText.zh})
+	请求地址：${url.href}
+	Cloudflare事件ID：${cfRay}
+	用户IP：${userIP}
+	用户信息：${userCountry}/${userRegion}/${userCity}/${userAsOrganization}/${userAsn}
+	用户代理：${userAgent}
+	错误上报ID：${tg_message_id}
+	请求时间：${timestamp}`,
+	});
+
+	html = html.replace(
+	"::EMAIL_REPLACE_BOX::",
+	`mailto:thun888@hzchu.top?${mail.toString()}`
+	);
+
 	// 替换标题
-	html = html.replace('<title>5XX错误</title>', `<title>${status} ${statusText.en} | ${statusText.zh}</title>`);
+	html = html.replaceAll('::TITLE_REPLACE_BOX::', `${status} ${statusText.en} | ${statusText.zh}`);
+	let imageUrl = '';
+	if (status === 403) {
+		imageUrl = '/__cfw_assets/img/403.webp';
+	} else if (status === 404) {
+		imageUrl = '/__cfw_assets/img/404.webp';
+	} else {
+		imageUrl = '/__cfw_assets/img/5xx.webp';
+	}
+	html = html.replace('::WRONG_IMAGE_REPLACE_BOX::', imageUrl);
 	return new Response(html, {
 		status: status,
 		headers: {
@@ -170,6 +202,16 @@ export default {
 			if (url.searchParams.get('testcfw') === '1') {
 				env.SKIP_NOTIFY = true;
 				return generateErrorResponse(503, request, env);
+			}
+
+			if (url.pathname.startsWith('/__cfw_assets/')) {
+				// 处理静态资源请求
+				const imageResp = await env.ASSETS.fetch("https://assets.local/" + url.pathname.replace('/__cfw_assets/', ''));
+				if (!imageResp.ok) {
+					env.SKIP_NOTIFY = true;
+					return generateErrorResponse(imageResp.status, request, env);
+				}
+				return imageResp;
 			}
 
 			// 代理请求到上游源站
