@@ -14,7 +14,7 @@
 	"assets": {
 		"directory": "./assets/",
 		"binding": "ASSETS",
-    	"run_worker_first": true
+    	"run_worker_first": false
 	},
 	"compatibility_flags": [
 		"nodejs_compat"
@@ -34,7 +34,8 @@
 		}
 	],
 	"vars": {
-		"CONTACT_EMAIL": "thun888@hzchu.top"
+		"CONTACT_EMAIL": "thun888@hzchu.top",
+		"BLACK_LIST": "[\"gz.server.74.757678.xyz\",\"home.server.757678.xyz\",\"74.757678.xyz\",\"hk-tt.server.74.757678.xyz\",\"oracle-us.server.74.757678.xyz\",\"fastest-cf.hzchu.top\"]"
 	},
 	/**
 	 * Smart Placement

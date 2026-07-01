@@ -10,8 +10,6 @@
 
 // 导入 HTML 模板
 import htmlTemplate from '../public/template.html';
-// 导入 black-list.json
-import blackList from '../public/black-list.json' ;
 // 哈希
 import { createHash } from 'crypto';
 
@@ -20,6 +18,7 @@ interface Env {
 	TG_BOT_TOKEN?: string;
 	TG_CHAT_ID?: string;
 	CONTACT_EMAIL?: string; // 错误报告收件人邮箱
+	BLACK_LIST?: string; // 黑名单域名，逗号分隔
 	SKIP_NOTIFY?: boolean; // 测试标志
 	ASSETS: Fetcher;
 }
@@ -194,6 +193,12 @@ export default {
 			const url = new URL(request.url);
 
 			// 屏蔽域名
+			let blackList: string[] = [];
+			try {
+				blackList = env.BLACK_LIST ? JSON.parse(env.BLACK_LIST) : [];
+			} catch (e) {
+				console.error('Failed to parse BLACK_LIST:', e);
+			}
 			const hostname = url.hostname.toLowerCase();
 			if (blackList.includes(hostname) && !url.pathname.startsWith('/.well-known/') && !url.pathname.startsWith('/__cfw_assets/')) {
 				env.SKIP_NOTIFY = true;
@@ -206,15 +211,15 @@ export default {
 				return generateErrorResponse(503, request, env);
 			}
 
-			if (url.pathname.startsWith('/__cfw_assets/')) {
-				// 处理静态资源请求
-				const imageResp = await env.ASSETS.fetch("https://assets.local/" + url.pathname.replace('/__cfw_assets/', ''));
-				if (!imageResp.ok) {
-					env.SKIP_NOTIFY = true;
-					return generateErrorResponse(imageResp.status, request, env);
-				}
-				return imageResp;
-			}
+			// if (url.pathname.startsWith('/__cfw_assets/')) {
+			// 	// 处理静态资源请求
+			// 	const imageResp = await env.ASSETS.fetch("https://assets.local/" + url.pathname.replace('/__cfw_assets/', ''));
+			// 	if (!imageResp.ok) {
+			// 		env.SKIP_NOTIFY = true;
+			// 		return generateErrorResponse(imageResp.status, request, env);
+			// 	}
+			// 	return imageResp;
+			// }
 
 			// 代理请求到上游源站
 			const response = await fetch(request);
