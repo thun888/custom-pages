@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <title>该网站已停止访问！</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #fffcf0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      display: flex;
+      width: 80vw;
+      max-width: 1000px;
+      min-height: 60vh;
+      border-radius: 18px;
+      background: #fffcf0;
+      overflow: hidden;
+    }
+
+    .left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 48px 36px;
+    }
+
+    .left h1 {
+      font-size: 2.2rem;
+      color: #b48e6a;
+      margin-bottom: 24px;
+    }
+
+    .left p {
+      font-size: 1.2rem;
+      color: #7c6f57;
+      margin-bottom: 18px;
+    }
+
+		.btn {
+			display: inline-block;
+			padding: 10px 28px;
+			background: #ffdea5;
+			color: #b48e6a;
+			border-radius: 6px;
+			text-decoration: none;
+			font-size: 1rem;
+			margin-top: 12px;
+			transition: background 0.25s, color 0.25s;
+		}
+
+		.btn:hover {
+			background: #ffbd4c;
+			color: #fff6e6;
+		}
+
+    .right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+    }
+
+    .right img {
+      max-width: 100%;
+      max-height: 60vh;
+      border-radius: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .container {
+        flex-direction: column;
+        width: 98vw;
+        min-height: unset;
+      }
+
+      .right,
+      .left {
+        padding: 24px 12px;
+      }
+
+      .right img {
+        max-height: 30vh;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="left">
+      <h1>该网站已停止访问！</h1>
+      <!-- <p>我们将会收集数据并尽快修复</p> -->
+      <p>如有需要，请通过邮件或其他方式联系我</p>
+      <a href="::EMAIL_REPLACE_BOX::" class="btn" id="sendemail">发送邮件</a>
+    </div>
+    <div class="right">
+      <img src="/__cfw_assets/img/403.webp" alt="This site has been stopped by the administrator!">
+    </div>
+  </div>
+</body>
+
+</html>

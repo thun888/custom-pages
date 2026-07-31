@@ -10,6 +10,7 @@
 
 // 导入 HTML 模板
 import htmlTemplate from '../public/template.html';
+import stopHtml from '../public/stop.html';
 // 哈希
 import { createHash } from 'crypto';
 
@@ -18,7 +19,8 @@ interface Env {
 	TG_BOT_TOKEN?: string;
 	TG_CHAT_ID?: string;
 	CONTACT_EMAIL?: string; // 错误报告收件人邮箱
-	BLACK_LIST?: string; // 黑名单域名，逗号分隔
+	BLACK_LIST?: string; // 黑名单域名，JSON 格式
+	STOP_LIST?: string; // 停止访问名单，JSON 格式
 	SKIP_NOTIFY?: boolean; // 测试标志
 	ASSETS: Fetcher;
 }
@@ -72,15 +74,28 @@ async function sendTelegramReport(
 ): Promise<string | undefined> {
 
 	const domain_short_hash = createHash('sha256').update(new URL(url).hostname).digest('hex').slice(0, 8);
+	// 从userAgent提取链接
+	const userAgentLinks = userAgent.match(/https?:\/\/[^\s\)\]]+/g) || [];
+
+	function formatLinks(links: string[]): string {
+		if (links.length === 0) return '';
+		let contents = '*相关链接:*\n';
+		contents += links.map(link => `- [${link}](${link})`).join('\n');
+		return contents;
+	}
+
+
 	const message = `#${domain_short_hash} CF错误报告
 *错误代码:* ${status} ${statusText.en} | ${statusText.zh}
-
 *请求地址:* ${url}
+*请求时间:* ${timestamp}
+
 *Cloudflare事件ID:* ${cfRay}
 *用户IP:* ${userIP}
 *用户信息:* ${userCountry}/${userRegion}/${userCity}/${userAsOrganization}/${userAsn}
 *用户代理:* ${userAgent.substring(0, 50)}${userAgent.length > 50 ? '...' : ''}
-*请求时间:* ${timestamp}`;
+${formatLinks(userAgentLinks)}
+`;
 
 	try {
 		const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -187,6 +202,21 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 	});
 }
 
+async function renderStopPage(request: Request, env: Env): Promise<Response> {
+	let html = stopHtml;
+	const contactEmail = env.CONTACT_EMAIL || 'example@example.com';
+	html = html.replace(
+		"::EMAIL_REPLACE_BOX::",
+		`mailto:${contactEmail}`
+	);
+	return new Response(html, {
+		status: 403,
+		headers: {
+			'Content-Type': 'text/html;charset=UTF-8',
+		},
+	});
+}
+
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		try {
@@ -199,10 +229,25 @@ export default {
 			} catch (e) {
 				console.error('Failed to parse BLACK_LIST:', e);
 			}
+
+			// 停止访问名单
+			let stopList: string[] = [];
+			try {
+				stopList = env.STOP_LIST ? JSON.parse(env.STOP_LIST) : [];
+			} catch (e) {
+				console.error('Failed to parse STOP_LIST:', e);
+			}
+
 			const hostname = url.hostname.toLowerCase();
 			if (blackList.includes(hostname) && !url.pathname.startsWith('/.well-known/') && !url.pathname.startsWith('/__cfw_assets/')) {
 				env.SKIP_NOTIFY = true;
 				return generateErrorResponse(403, request, env);
+			}
+
+			if (stopList.includes(hostname) && !url.pathname.startsWith('/.well-known/') && !url.pathname.startsWith('/__cfw_assets/')) {
+				env.SKIP_NOTIFY = true;
+				// 返回stop.html页面
+				return renderStopPage(request, env);
 			}
 
 			// 测试后门：?testcfw=1，强制显示 503
