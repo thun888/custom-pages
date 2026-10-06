@@ -46,6 +46,14 @@ const STATUS_TEXTS: Record<number, { en: string; zh: string }> = {
 	530: { en: 'Origin Error', zh: '源站错误' },
 };
 
+// 需要简化返回错误信息的UA
+const PLAIN_UA_LIST: string[] = [
+	'claude',
+	'deepseek-harness',
+	'codex'
+]
+
+
 /**
  * 获取状态码的描述文本
  */
@@ -145,6 +153,22 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 		tg_message_id = await sendTelegramReport(env.TG_BOT_TOKEN, env.TG_CHAT_ID, status, statusText, url.href, cfRay, userIP, userAgent, userCountry, userRegion, userCity, userAsOrganization, userAsn, timestamp);
 	}
 
+	const contactEmail = env.CONTACT_EMAIL || 'example@example.com';
+
+
+	if (PLAIN_UA_LIST.some(ua => userAgent.toLowerCase().includes(ua))) {
+		// 简化返回错误信息
+		return new Response(JSON.stringify({
+			status: status,
+			message: `${statusText.en} (${statusText.zh}), please contact ${contactEmail} with error report ID: ${tg_message_id}`,
+		}), {
+			status: status,
+			headers: {
+				'Content-Type': 'application/json;charset=UTF-8',
+			},
+		});
+	}
+
 	// 构建错误信息盒子
 	const errorBox = `
 		<div style="background: rgba(180, 142, 106, 0.1); border-radius: 8px; padding: 16px; margin: 12px 0;">
@@ -177,7 +201,6 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 	请求时间：${timestamp}`,
 	});
 
-	const contactEmail = env.CONTACT_EMAIL || 'example@example.com';
 	html = html.replace(
 		"::EMAIL_REPLACE_BOX::",
 		`mailto:${contactEmail}?${mail.toString()}`
