@@ -9,8 +9,8 @@
  */
 
 // 导入 HTML 模板
-import htmlTemplate from '../public/template.html';
-import stopHtml from '../public/stop.html';
+import htmlTemplate from './templates/template.html';
+import stopHtml from './templates/stop.html';
 // 哈希
 import { createHash } from 'crypto';
 
