@@ -36,7 +36,8 @@
 	"vars": {
 		"CONTACT_EMAIL": "i@mail.hzchu.top",
 		"BLACK_LIST": "[\"gz.server.74.757678.xyz\",\"home.server.757678.xyz\",\"74.757678.xyz\",\"hk-tt.server.74.757678.xyz\",\"oracle-us.server.74.757678.xyz\",\"fastest-cf.hzchu.top\"]",
-		"STOP_LIST": "[\"cf-r2-onep-sync.hzchu.top\",\"ancient-bridge.school.hzchu.top\",\"lxh.hzchu.top\"]"
+		"STOP_LIST": "[\"cf-r2-onep-sync.hzchu.top\",\"ancient-bridge.school.hzchu.top\",\"lxh.hzchu.top\"]",
+		"MAINTENANCE_LIST": "[\"share.hzchu.top\"]"
 	}
 	/**
 	 * Smart Placement

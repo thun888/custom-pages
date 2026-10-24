@@ -204,6 +204,16 @@ const pages = {
 		content: () => '<p>如有需要，请通过邮件或其他方式联系我</p>',
 		email: (context: PageContext) => `mailto:${context.contactEmail}`,
 	},
+	maintenance: {
+		status: 503,
+		notify: false,
+		heading: '网站维护中',
+		buttonText: '发送邮件',
+		title: () => '网站维护中 | 请稍后再试',
+		image: () => '/__cfw_assets/img/maintenance.webp',
+		content: () => '<p>网站小憩中，稍后再来访问吧。</p>',
+		email: (context: PageContext) => `mailto:${context.contactEmail}`,
+	},
 } satisfies Record<string, PageDefinition>;
 
 export type PageKey = keyof typeof pages;

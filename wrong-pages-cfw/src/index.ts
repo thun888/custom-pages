@@ -19,6 +19,7 @@ interface Env {
 	CONTACT_EMAIL?: string; // 错误报告收件人邮箱
 	BLACK_LIST?: string; // 黑名单域名，JSON 格式
 	STOP_LIST?: string; // 停止访问名单，JSON 格式
+	MAINTENANCE_LIST?: string; // 维护中域名，JSON 格式
 	ASSETS: Fetcher;
 }
 
@@ -42,6 +43,7 @@ interface RuleContext {
 	hostname: string;
 	blackList: string[];
 	stopList: string[];
+	maintenanceList: string[];
 	isSystemPath: boolean;
 }
 
@@ -76,6 +78,7 @@ function buildRuleContext(url: URL, env: Env): RuleContext {
 		hostname: url.hostname.toLowerCase(),
 		blackList: parseList(env.BLACK_LIST, 'BLACK_LIST'),
 		stopList: parseList(env.STOP_LIST, 'STOP_LIST'),
+		maintenanceList: parseList(env.MAINTENANCE_LIST, 'MAINTENANCE_LIST'),
 		isSystemPath: SYSTEM_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix)),
 	};
 }
@@ -94,6 +97,11 @@ const RULES: Rule[] = [
 		name: 'stoplist',
 		match: (context) => !context.isSystemPath && context.stopList.includes(context.hostname),
 		page: { page: 'stopped' },
+	},
+	{
+		name: 'maintenance',
+		match: (context) => !context.isSystemPath && context.maintenanceList.includes(context.hostname),
+		page: { page: 'maintenance' },
 	},
 	{
 		name: 'test-mode',

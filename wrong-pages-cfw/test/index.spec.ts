@@ -74,6 +74,24 @@ describe('Error Page Worker', () => {
 		expect(await response.text()).toContain('该网站已停止访问！');
 	});
 
+	it('维护名单域名应返回维护页', async () => {
+		const request = new IncomingRequest('http://maintenance.example/');
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(
+			request,
+			{ ...env, BLACK_LIST: '[]', STOP_LIST: '[]', MAINTENANCE_LIST: '["maintenance.example"]' },
+			ctx
+		);
+		await waitOnExecutionContext(ctx);
+
+		expect(response.status).toBe(503);
+		expect(response.headers.get('Content-Type')).toContain('text/html');
+
+		const html = await response.text();
+		expect(html).toContain('网站维护中');
+		expect(html).toContain('/__cfw_assets/img/maintenance.webp');
+	});
+
 	it('应返回 503 错误页面 (integration style)', async () => {
 		const response = await SELF.fetch('https://example.com/?testcfw=1');
 		expect(response.status).toBe(503);
