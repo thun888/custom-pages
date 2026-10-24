@@ -31,6 +31,35 @@ describe('Error Page Worker', () => {
 		expect(response).toBeDefined();
 	});
 
+	it('黑名单域名应直接返回 403 错误页', async () => {
+		const request = new IncomingRequest('http://blocked.example/');
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(
+			request,
+			{ ...env, BLACK_LIST: '["blocked.example"]', STOP_LIST: '[]' },
+			ctx
+		);
+		await waitOnExecutionContext(ctx);
+
+		expect(response.status).toBe(403);
+		expect(response.headers.get('Content-Type')).toContain('text/html');
+		expect(await response.text()).toContain('403 Forbidden');
+	});
+
+	it('停站名单域名应返回停站页', async () => {
+		const request = new IncomingRequest('http://stopped.example/');
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(
+			request,
+			{ ...env, BLACK_LIST: '[]', STOP_LIST: '["stopped.example"]' },
+			ctx
+		);
+		await waitOnExecutionContext(ctx);
+
+		expect(response.status).toBe(403);
+		expect(await response.text()).toContain('该网站已停止访问！');
+	});
+
 	it('应返回 503 错误页面 (integration style)', async () => {
 		const response = await SELF.fetch('https://example.com/?testcfw=1');
 		expect(response.status).toBe(503);

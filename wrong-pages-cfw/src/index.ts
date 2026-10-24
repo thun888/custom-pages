@@ -21,7 +21,6 @@ interface Env {
 	CONTACT_EMAIL?: string; // 错误报告收件人邮箱
 	BLACK_LIST?: string; // 黑名单域名，JSON 格式
 	STOP_LIST?: string; // 停止访问名单，JSON 格式
-	SKIP_NOTIFY?: boolean; // 测试标志
 	ASSETS: Fetcher;
 }
 
@@ -130,7 +129,7 @@ ${formatLinks(userAgentLinks)}
 /**
  * 生成错误响应
  */
-async function generateErrorResponse(status: number, request: Request, env: Env): Promise<Response> {
+async function generateErrorResponse(status: number, request: Request, env: Env, notify = true): Promise<Response> {
 	const statusText = getStatusText(status);
 	const url = new URL(request.url);
 	const timestamp = new Date().toLocaleString('zh-CN', {
@@ -149,7 +148,7 @@ async function generateErrorResponse(status: number, request: Request, env: Env)
 
 	let tg_message_id: string | undefined = "无";
 	// 异步发送 Telegram 报告
-	if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && !env.SKIP_NOTIFY && !url.href.endsWith('favicon.ico')) {
+	if (notify && env.TG_BOT_TOKEN && env.TG_CHAT_ID && !url.href.endsWith('favicon.ico')) {
 		tg_message_id = await sendTelegramReport(env.TG_BOT_TOKEN, env.TG_CHAT_ID, status, statusText, url.href, cfRay, userIP, userAgent, userCountry, userRegion, userCity, userAsOrganization, userAsn, timestamp);
 	}
 
@@ -240,56 +239,100 @@ async function renderStopPage(request: Request, env: Env): Promise<Response> {
 	});
 }
 
+/**
+ * 页面动作：前置规则命中后，直接返回的页面
+ */
+type PageAction =
+	| { kind: 'error'; status: number; notify?: boolean }
+	| { kind: 'stop' };
+
+/**
+ * 规则上下文：每个请求只构建一次，规则本身只做纯判断
+ */
+interface RuleContext {
+	url: URL;
+	hostname: string;
+	blackList: string[];
+	stopList: string[];
+	isSystemPath: boolean;
+}
+
+interface Rule {
+	/** 规则名，仅用于阅读和排查 */
+	name: string;
+	match: (context: RuleContext) => boolean;
+	page: PageAction;
+}
+
+/** 这些路径不受黑名单影响 */
+const SYSTEM_PATH_PREFIXES = ['/.well-known/', '/__cfw_assets/'];
+
+function parseList(raw: string | undefined, name: string): string[] {
+	if (!raw) return [];
+	try {
+		const parsed: unknown = JSON.parse(raw);
+		if (!Array.isArray(parsed)) {
+			console.error(`${name} 不是数组，已忽略`);
+			return [];
+		}
+		return parsed.map(String);
+	} catch (e) {
+		console.error(`Failed to parse ${name}:`, e);
+		return [];
+	}
+}
+
+function buildRuleContext(url: URL, env: Env): RuleContext {
+	return {
+		url,
+		hostname: url.hostname.toLowerCase(),
+		blackList: parseList(env.BLACK_LIST, 'BLACK_LIST'),
+		stopList: parseList(env.STOP_LIST, 'STOP_LIST'),
+		isSystemPath: SYSTEM_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix)),
+	};
+}
+
+/**
+ * 前置规则表：按顺序匹配，命中即返回对应页面；全部不命中时走代理。
+ * 新增一类拦截 / 测试入口时，只需要在这里加一条。
+ */
+const RULES: Rule[] = [
+	{
+		name: 'blacklist',
+		match: (context) => !context.isSystemPath && context.blackList.includes(context.hostname),
+		page: { kind: 'error', status: 403, notify: false },
+	},
+	{
+		name: 'stoplist',
+		match: (context) => !context.isSystemPath && context.stopList.includes(context.hostname),
+		page: { kind: 'stop' },
+	},
+	{
+		name: 'test-mode',
+		match: (context) => context.url.searchParams.get('testcfw') === '1',
+		page: { kind: 'error', status: 503, notify: false },
+	},
+];
+
+function respondPage(action: PageAction, request: Request, env: Env): Promise<Response> {
+	if (action.kind === 'stop') {
+		return renderStopPage(request, env);
+	}
+	return generateErrorResponse(action.status, request, env, action.notify ?? true);
+}
+
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		try {
 			const url = new URL(request.url);
+			const ruleContext = buildRuleContext(url, env);
+			const rule = RULES.find((candidate) => candidate.match(ruleContext));
 
-			// 屏蔽域名
-			let blackList: string[] = [];
-			try {
-				blackList = env.BLACK_LIST ? JSON.parse(env.BLACK_LIST) : [];
-			} catch (e) {
-				console.error('Failed to parse BLACK_LIST:', e);
+			if (rule) {
+				return respondPage(rule.page, request, env);
 			}
 
-			// 停止访问名单
-			let stopList: string[] = [];
-			try {
-				stopList = env.STOP_LIST ? JSON.parse(env.STOP_LIST) : [];
-			} catch (e) {
-				console.error('Failed to parse STOP_LIST:', e);
-			}
-
-			const hostname = url.hostname.toLowerCase();
-			if (blackList.includes(hostname) && !url.pathname.startsWith('/.well-known/') && !url.pathname.startsWith('/__cfw_assets/')) {
-				env.SKIP_NOTIFY = true;
-				return generateErrorResponse(403, request, env);
-			}
-
-			if (stopList.includes(hostname) && !url.pathname.startsWith('/.well-known/') && !url.pathname.startsWith('/__cfw_assets/')) {
-				env.SKIP_NOTIFY = true;
-				// 返回stop.html页面
-				return renderStopPage(request, env);
-			}
-
-			// 测试后门：?testcfw=1，强制显示 503
-			if (url.searchParams.get('testcfw') === '1') {
-				env.SKIP_NOTIFY = true;
-				return generateErrorResponse(503, request, env);
-			}
-
-			// if (url.pathname.startsWith('/__cfw_assets/')) {
-			// 	// 处理静态资源请求
-			// 	const imageResp = await env.ASSETS.fetch("https://assets.local/" + url.pathname.replace('/__cfw_assets/', ''));
-			// 	if (!imageResp.ok) {
-			// 		env.SKIP_NOTIFY = true;
-			// 		return generateErrorResponse(imageResp.status, request, env);
-			// 	}
-			// 	return imageResp;
-			// }
-
-			// 代理请求到上游源站
+			// 未命中任何规则：代理请求到上游源站
 			const response = await fetch(request);
 
 			// 拦截 5xx 错误
