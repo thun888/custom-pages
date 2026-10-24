@@ -20,6 +20,20 @@ describe('Error Page Worker', () => {
 		expect(html).toContain('错误代码');
 	});
 
+	it('agent/cli 程序类 UA 应返回 JSON', async () => {
+		const request = new IncomingRequest('http://example.com/?testcfw=1', {
+			headers: { 'User-Agent': 'claude/1.0' },
+		});
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, env, ctx);
+		await waitOnExecutionContext(ctx);
+
+		expect(response.status).toBe(503);
+		expect(response.headers.get('Content-Type')).toContain('application/json');
+		const data = (await response.json()) as { status: number };
+		expect(data.status).toBe(503);
+	});
+
 	it('应正常代理请求到上游源站', async () => {
 		const request = new IncomingRequest('http://example.com/');
 		const ctx = createExecutionContext();

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>::TITLE_REPLACE_BOX::</title>
+  <title>{{title}}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<style>
 		body {
@@ -122,13 +122,12 @@
 <body>
   <div class="container">
     <div class="left">
-      <h1>很抱歉，我们遇到了一些问题</h1>
-      <!-- <p>我们将会收集数据并尽快修复</p> -->
-      ::CARD_CONTENT_REPLACE_BOX::
-      <a href="::EMAIL_REPLACE_BOX::" class="btn" id="sendemail">发送邮件协助我们</a>
+      <h1>{{heading}}</h1>
+      {{content}}
+      <a href="{{email}}" class="btn" id="sendemail">{{buttonText}}</a>
     </div>
     <div class="right">
-      <img src="::WRONG_IMAGE_REPLACE_BOX::" alt="::TITLE_REPLACE_BOX::">
+      <img src="{{image}}" alt="{{title}}">
     </div>
   </div>
 </body>
